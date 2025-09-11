@@ -8,23 +8,20 @@
 body { margin: 0; background: #222; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; color: #fff; font-family: Arial, sans-serif; }
 canvas { background: linear-gradient(#555, #222); display: block; border: 2px solid #fff; }
 #hud { margin-top: 10px; font-size: 18px; }
-#startButton { margin-top: 20px; padding: 10px 20px; font-size: 16px; cursor: pointer; }
 </style>
 </head>
 <body>
 
 <canvas id="game" width="400" height="600"></canvas>
 <div id="hud">⏱ Tempo: 0s | 🏆 Recorde: 0s</div>
-<button id="startButton">▶ Começar Jogo</button>
 
 <!-- Áudio do motor -->
-<audio id="engineSound" src="motor.mp3" preload="auto" loop></audio>
+<audio id="engineSound" src="motor.mp3" preload="auto" loop autoplay></audio>
 
 <script>
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const hud = document.getElementById('hud');
-const startButton = document.getElementById('startButton');
 const W = canvas.width;
 const H = canvas.height;
 
@@ -39,7 +36,9 @@ let lastUpdate = performance.now();
 
 const engineSound = document.getElementById("engineSound");
 engineSound.volume = 0.4;
-let enginePlaying = false;
+
+// Desbloqueia o som automaticamente para navegadores
+window.addEventListener('click', ()=>{ engineSound.play().catch(()=>{}); }, {once:true});
 
 function spawnCar(){
     let lane = Math.floor(Math.random()*3);
@@ -60,29 +59,15 @@ function resetGame(){
     lastUpdate = performance.now();
 }
 
-function updateEngineSound(moving){
-    if(moving && !enginePlaying){
-        engineSound.play().catch(()=>{});
-        enginePlaying = true;
-    } else if(!moving && enginePlaying){
-        engineSound.pause();
-        engineSound.currentTime = 0;
-        enginePlaying = false;
-    }
-}
-
 function update(){
     const now = performance.now();
     const delta = (now - lastUpdate) / 1000;
     lastUpdate = now;
     time += delta;
 
-    let moving = false;
-    if(keys['ArrowLeft']) { player.x -= player.speed; moving = true; }
-    if(keys['ArrowRight']) { player.x += player.speed; moving = true; }
+    if(keys['ArrowLeft']) player.x -= player.speed;
+    if(keys['ArrowRight']) player.x += player.speed;
     player.x = Math.max(W/2 - roadWidth/2, Math.min(player.x, W/2 + roadWidth/2 - player.w));
-
-    updateEngineSound(moving);
 
     cars.forEach(c => c.y += c.speed);
     cars = cars.filter(c => c.y < H + 70);
@@ -141,16 +126,10 @@ function loop(){
     requestAnimationFrame(loop);
 }
 
-// Iniciar o jogo
-startButton.addEventListener('click', ()=>{
-    startButton.style.display = 'none';
-    engineSound.play().catch(()=>{}); // Motor já toca assim que inicia
-    loop();
-});
-
 window.addEventListener('keydown', e => keys[e.key] = true);
 window.addEventListener('keyup', e => keys[e.key] = false);
 
+loop();
 </script>
 </body>
 </html>
