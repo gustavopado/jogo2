@@ -8,15 +8,19 @@
 body { margin: 0; background: #222; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; color: #fff; font-family: Arial, sans-serif; }
 canvas { background: linear-gradient(#555, #222); display: block; border: 2px solid #fff; }
 #hud { margin-top: 10px; font-size: 18px; }
+#hornButton { margin-top: 10px; padding: 8px 16px; font-size: 16px; cursor: pointer; }
 </style>
 </head>
 <body>
 
 <canvas id="game" width="400" height="600"></canvas>
 <div id="hud">⏱ Tempo: 0s | 🏆 Recorde: 0s</div>
+<button id="hornButton">🚗 Buzinar</button>
 
-<!-- Áudio do motor -->
-<audio id="engineSound" src="motor.mp3" preload="auto" loop autoplay></audio>
+<!-- Áudios -->
+<audio id="engineSound" src="motor.mp3" preload="auto" loop></audio>
+<audio id="hornSound" src="buzina.mp3" preload="auto"></audio>
+<audio id="collisionSound" src="colisao.mp3" preload="auto"></audio>
 
 <script>
 const canvas = document.getElementById('game');
@@ -36,9 +40,24 @@ let lastUpdate = performance.now();
 
 const engineSound = document.getElementById("engineSound");
 engineSound.volume = 0.4;
+let enginePlaying = false;
 
-// Desbloqueia o som automaticamente para navegadores
-window.addEventListener('click', ()=>{ engineSound.play().catch(()=>{}); }, {once:true});
+// Ativa o motor no primeiro clique
+window.addEventListener('click', () => {
+    engineSound.play().catch(()=>{});
+    enginePlaying = true;
+}, { once:true });
+
+// Buzina
+const hornSound = document.getElementById("hornSound");
+document.getElementById("hornButton").addEventListener("click", () => {
+    hornSound.currentTime = 0;
+    hornSound.play();
+});
+window.addEventListener("keydown", e => { if(e.key.toLowerCase() === 'b'){ hornSound.currentTime=0; hornSound.play(); } });
+
+// Colisão
+const collisionSound = document.getElementById("collisionSound");
 
 function spawnCar(){
     let lane = Math.floor(Math.random()*3);
@@ -65,9 +84,13 @@ function update(){
     lastUpdate = now;
     time += delta;
 
-    if(keys['ArrowLeft']) player.x -= player.speed;
-    if(keys['ArrowRight']) player.x += player.speed;
+    let moving = false;
+    if(keys['ArrowLeft']) { player.x -= player.speed; moving = true; }
+    if(keys['ArrowRight']) { player.x += player.speed; moving = true; }
     player.x = Math.max(W/2 - roadWidth/2, Math.min(player.x, W/2 + roadWidth/2 - player.w));
+
+    // Som do motor sempre tocando enquanto o jogo roda
+    if(enginePlaying && engineSound.paused) engineSound.play().catch(()=>{});
 
     cars.forEach(c => c.y += c.speed);
     cars = cars.filter(c => c.y < H + 70);
@@ -76,6 +99,8 @@ function update(){
     for(let c of cars){
         if(c.x < player.x + player.w && c.x + c.w > player.x && c.y < player.y + player.h && c.y + c.h > player.y){
             if(time > bestTime) bestTime = time;
+            collisionSound.currentTime = 0;
+            collisionSound.play();
             resetGame();
             break;
         }
@@ -94,6 +119,7 @@ function drawRoad(){
     ctx.closePath();
     ctx.fill();
 
+    // Faixa central
     ctx.strokeStyle = '#fff';
     ctx.setLineDash([20, 20]);
     ctx.beginPath();
@@ -131,5 +157,6 @@ window.addEventListener('keyup', e => keys[e.key] = false);
 
 loop();
 </script>
+
 </body>
 </html>
